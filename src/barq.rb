@@ -14,7 +14,6 @@ class BarqWrapping
     @useragent = "BarqWrapping/0.1.0"
     @configPath = configFile
     @config = config(@configPath)
-    
   end
 
   def autologin
@@ -104,9 +103,9 @@ class BarqWrapping
     log(level: :info, message: "Cookie: #{cookies}")
     @config["token"] = codes["access_token"]
     @config["cookie"] = cookies
-    puts @config
-    puts @configPath
-    
+    # puts @config
+    # puts @configPath
+
     File.write(@configPath, JSON.pretty_generate(@config))
   end
 
@@ -116,6 +115,37 @@ class BarqWrapping
     return JSON.parse(res.body)
   end
 
+  def find(username, isLewd: false, limit: 15)
+    uri = URI("#{@api[:api]}/graphql")
+    payload = 
+    {
+      "operationName": "ProfileSearch",
+      "variables": {
+        "cursor": "0",
+        "filters": {
+          "displayName": username,
+        },
+        "isAd": isLewd,
+      },
+      "query": "query ProfileSearch($filters: ProfileSearchFiltersInput!, $cursor: String = \"0\", $isAd: Boolean) {\n  profileSearch(filters: $filters, cursor: $cursor, limit: #{limit}, isAd: $isAd) {\n    uuid\n    displayName\n    profileImage(isAd: $isAd) {\n      id\n      image {\n        ...UploadedImage\n        __typename\n      }\n      __typename\n    }\n    roles\n    __typename\n  }\n}\n\nfragment UploadedImage on UploadedImage {\n  uuid\n  url\n  isExplicit\n  contentRating\n  height\n  width\n  __typename\n}"
+    }
+    res = post(uri, { "Content-Type" => "application/json" }, data: payload.to_json, authed: true)
+    return JSON.parse(res.body)
+  end
+
+  def user(uuid,isLewd: false)
+    uri = URI("#{@api[:api]}/graphql")
+    payload = {
+      "operationName": "ProfileDetail",
+      "variables": {
+        "uuid": uuid,
+        "isAd": isLewd,
+      },
+      "query": "query ProfileDetail($uuid: String!, $isAd: Boolean, $location: SearchLocationInput) {\n  profile(uuid: $uuid, location: $location) {\n    id\n    uuid\n    displayName\n    relationType\n    isAdOptIn\n    isBirthday\n    age\n    profileImage(isAd: $isAd) {\n      id\n      image {\n        ...UploadedImage\n        __typename\n      }\n      __typename\n    }\n    privacySettings {\n      ...PrivacyFragment\n      __typename\n    }\n    images {\n      id\n      image {\n        ...UploadedImage\n        __typename\n      }\n      isAd\n      likeCount\n      hasLiked\n      accessPermission\n      __typename\n    }\n    location {\n      type\n      distance\n      place {\n        place\n        region\n        countryCode\n        longitude\n        latitude\n        __typename\n      }\n      __typename\n    }\n    bio {\n      biography\n      genders\n      languages\n      relationshipStatus\n      sexualOrientation\n      interests\n      hobbies {\n        id\n        interest\n        __typename\n      }\n      socialAccounts {\n        ...SocialAccountsFragment\n        __typename\n      }\n      __typename\n    }\n    bioAd {\n      biography\n      sexPositions\n      behaviour\n      safeSex\n      canHost\n      __typename\n    }\n    sonas {\n      id\n      displayName\n      images {\n        id\n        __typename\n      }\n      description\n      hasFursuit\n      species {\n        id\n        displayName\n        __typename\n      }\n      __typename\n    }\n    kinks {\n      kink {\n        id\n        displayName\n        categoryName\n        isVerified\n        isSinglePlayer\n        __typename\n      }\n      pleasureReceive\n      pleasureGive\n      __typename\n    }\n    groups {\n      group {\n        uuid\n        displayName\n        isAd\n        contentRating\n        image {\n          ...UploadedImage\n          __typename\n        }\n        __typename\n      }\n      threadCount\n      replyCount\n      __typename\n    }\n    events {\n      event {\n        uuid\n        displayName\n        isAd\n        contentRating\n        eventBeginAt\n        eventEndAt\n        image {\n          ...UploadedImage\n          __typename\n        }\n        __typename\n      }\n      isWaitingList\n      __typename\n    }\n    socialAccounts {\n      id\n      socialNetwork\n      isVerified\n      url\n      displayName\n      value\n      accessPermission\n      __typename\n    }\n    roles\n    shareHash\n    __typename\n  }\n}\n\nfragment UploadedImage on UploadedImage {\n  uuid\n  url\n  isExplicit\n  contentRating\n  height\n  width\n  __typename\n}\n\nfragment PrivacyFragment on PrivacySettings {\n  startChat\n  viewAge\n  viewAd\n  viewKinks\n  viewProfile\n  blockAdults\n  blockMinors\n  showLastOnline\n  __typename\n}\n\nfragment SocialAccountsFragment on ProfileSocialAccounts {\n  twitter {\n    value\n    accessPermission\n    __typename\n  }\n  twitterAd {\n    value\n    accessPermission\n    __typename\n  }\n  telegram {\n    value\n    accessPermission\n    __typename\n  }\n  instagram {\n    value\n    accessPermission\n    __typename\n  }\n  steam {\n    value\n    accessPermission\n    __typename\n  }\n  discord {\n    value\n    accessPermission\n    __typename\n  }\n  deviantArt {\n    value\n    accessPermission\n    __typename\n  }\n  furAffinity {\n    value\n    accessPermission\n    __typename\n  }\n  bluesky {\n    value\n    accessPermission\n    __typename\n  }\n  mastodon {\n    value\n    accessPermission\n    __typename\n  }\n  vrChat {\n    value\n    accessPermission\n    __typename\n  }\n  __typename\n}"
+    }
+    res = post(uri, { "Content-Type" => "application/json" }, data: payload.to_json, authed: true)
+    return JSON.parse(res.body)
+  end
   private
 
   def qr(token)
@@ -162,7 +192,7 @@ class BarqWrapping
     return res
   end
 
-  def post(uri, headers = {}, data = nil, authed: false)
+  def post(uri, headers = {}, data: nil, authed: false)
     req = Net::HTTP::Post.new(uri)
 
     req["User-Agent"] = @useragent
@@ -179,7 +209,6 @@ class BarqWrapping
     return res
   end
 
-
   def config(file_name)
     if File.exist?(file_name)
       return JSON.parse(File.read(file_name))
@@ -187,8 +216,7 @@ class BarqWrapping
       raise("Config file not found!")
       # File.write(file_name, JSON.pretty_generate({}))
       # return {}
-      
+
     end
   end
-  
 end

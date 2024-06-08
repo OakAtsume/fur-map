@@ -68,11 +68,30 @@ def color(color, msg)
 end
 
 def hashToTable(headers, data)
-  table = ""
-  table += headers.join(" | ") + "\n"
-  table += "-" * (headers.join(" | ").length) + "\n"
+  column_sizes = headers.map(&:length)
   data.each do |row|
-    table += row.join(" | ") + "\n"
+    row.each_with_index do |cell, index|
+      column_sizes[index] = [column_sizes[index], cell.to_s.length].max
+    end
   end
+
+  table = ""
+  table += "\n"
+  headers.each_with_index do |header, index|
+    table += header.ljust(column_sizes[index])
+    table += " ⠿ " unless index == headers.length - 1
+  end
+  table += "\n"
+  table += "-" * (column_sizes.sum + 3 * (headers.length - 1))
+  table += "\n"
+
+  data.each do |row|
+    row.each_with_index do |cell, index|
+      table += cell.to_s.ljust(column_sizes[index])
+      table += " ⠿ " unless index == row.length - 1
+    end
+    table += "\n"
+  end
+
   return table
 end

@@ -27,6 +27,8 @@ end
 if arguments.has_key?("login")
   log(level: :info, message: "Starting login process...")
   barq.autologin
+  log(level: :info, message: "Login process completed.")
+  exit 0
 end
 
 if arguments.has_key?("help")

@@ -52,7 +52,7 @@ class BarqWrapping
     cookies = loginReq.get_fields("set-cookie").join("; ")
     loginUri = URI("#{@api[:id]}#{loginReq.get_fields("location")[0].gsub("http", "https")}")
     loginReq = get(loginUri, { "Cookie" => cookies })
-    puts loginReq.body
+    # puts loginReq.body
     interactionid = loginReq.body.scan(/interaction\/(.+?)\/confirm/).flatten[0]
     if interactionid.nil? || interactionid.empty?
       log(level: :error, message: "No interaction ID found! Please create an issue on the GitHub repository!!")
@@ -74,8 +74,9 @@ class BarqWrapping
 
     location = req.get_fields("location")[0].gsub("http", "https")
     initial = URI(location)
-    puts intial
-    puts initial.query
+    # puts intial
+    # puts initial.query
+
     code = initial.query.scan(/code=(.+?)&/).flatten[0]
 
     if code.nil? || code.empty?
@@ -105,6 +106,7 @@ class BarqWrapping
     @config["cookie"] = cookies
     puts @config
     puts @configPath
+    
     File.write(@configPath, JSON.pretty_generate(@config))
   end
 

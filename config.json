@@ -1,4 +1,4 @@
 {
-  "token": "33J4jIdfuaen2k3JhzAhWcAOJ8Y9wsRmNs6FNR19Gom",
-  "cookie": "_interaction_resume=; path=/auth/sDUMacAVN9HCEbJfJIVrh; expires=Thu, 01 Jan 1970 00:00:00 GMT; samesite=lax; httponly; _interaction_resume.sig=7K3lQvp5ig9b3dxrZ-puWe4b5ZI; path=/auth/sDUMacAVN9HCEbJfJIVrh; expires=Thu, 01 Jan 1970 00:00:00 GMT; samesite=lax; httponly; _session=u5sbOUkoX4OXZuwjPf0FJ; path=/; samesite=none; httponly; expires=Sat, 22 Jun 2024 05:33:25 GMT; _session.sig=vd7xHlYb_uusZ7rwS2Yw8apARYU; path=/; samesite=none; httponly; expires=Sat, 22 Jun 2024 05:33:25 GMT; _session.legacy=u5sbOUkoX4OXZuwjPf0FJ; path=/; httponly; expires=Sat, 22 Jun 2024 05:33:25 GMT; _session.legacy.sig=9TAY_j_jACyzvWKsDPnXNmqio7A; path=/; httponly; expires=Sat, 22 Jun 2024 05:33:25 GMT"
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTc3MDQwLCJ0b2tlbiI6IjAxMGYzNjZmLTNmOWUtNDI0ZS04MDNlLTMwY2UyYjFkZTllYiIsImlhdCI6MTcxNzkwODI1MX0.nNrmHgwbw4UdgUTM6kllrZ7eA_NdiglulxuQs9EtL2s",
+  "cookie": ""
 }

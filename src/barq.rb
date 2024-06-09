@@ -16,7 +16,7 @@ class BarqWrapping
     @config = config(@configPath)
   end
 
-  def autologin
+  def qrLogin
     intial = URI("#{@api[:id]}/auth?client_id=barq-web&redirect_uri=https%3A%2F%2Fweb.barq.app%2Flogin%2Fcallback&response_type=code&state=%2F&scope=openid%20profile%20offline_access&prompt=consent") # This is the initial login page
     redir = get(intial)
     cookies = redir.get_fields("set-cookie").join("; ")
@@ -109,6 +109,37 @@ class BarqWrapping
     File.write(@configPath, JSON.pretty_generate(@config))
   end
 
+  def login(email)
+    # Check that email is valid
+
+    uri = URI("#{@api[:api]}/account-provider/email/request-code")
+    payload = { "email": email }.to_json
+    res = post(uri, { "Content-Type" => "application/json" }, data: payload)
+    log(level: :info, message: "Email sent to #{email} with verification code.")
+    log(level: :info, message: "Please provide the verification code below.")
+    print("Verification Code: ")
+    code = gets.chomp
+    code = code.upcase
+    uri = URI("#{@api[:api]}/account-provider/email/login")
+    payload = { "email": email, "code": code }.to_json
+    res = post(uri, { "Content-Type" => "application/json" }, data: payload)
+    # Check if body is JSON.
+    if res.body.start_with?("{")
+      reply = JSON.parse(res.body)
+      if reply.has_key?("error")
+        log(level: :error, message: reply["message"])
+        exit 1
+      end
+    end
+    # puts res.body
+    # puts res.body
+
+    log(level: :info, message: "Logged in successfully.")
+    @config["token"] = res.body.gsub("\"", "")
+    @config["cookie"] = ""
+    File.write(@configPath, JSON.pretty_generate(@config))
+  end
+
   def localuser
     uri = URI("#{@api[:id]}/me")
     res = get(uri, { "Content-Type" => "application/json" }, authed: true)
@@ -117,23 +148,23 @@ class BarqWrapping
 
   def find(username, isLewd: false, limit: 15)
     uri = URI("#{@api[:api]}/graphql")
-    payload = 
-    {
-      "operationName": "ProfileSearch",
-      "variables": {
-        "cursor": "0",
-        "filters": {
-          "displayName": username,
+    payload =
+      {
+        "operationName": "ProfileSearch",
+        "variables": {
+          "cursor": "0",
+          "filters": {
+            "displayName": username,
+          },
+          "isAd": isLewd,
         },
-        "isAd": isLewd,
-      },
-      "query": "query ProfileSearch($filters: ProfileSearchFiltersInput!, $cursor: String = \"0\", $isAd: Boolean) {\n  profileSearch(filters: $filters, cursor: $cursor, limit: #{limit}, isAd: $isAd) {\n    uuid\n    displayName\n    profileImage(isAd: $isAd) {\n      id\n      image {\n        ...UploadedImage\n        __typename\n      }\n      __typename\n    }\n    roles\n    __typename\n  }\n}\n\nfragment UploadedImage on UploadedImage {\n  uuid\n  url\n  isExplicit\n  contentRating\n  height\n  width\n  __typename\n}"
-    }
+        "query": "query ProfileSearch($filters: ProfileSearchFiltersInput!, $cursor: String = \"0\", $isAd: Boolean) {\n  profileSearch(filters: $filters, cursor: $cursor, limit: #{limit}, isAd: $isAd) {\n    uuid\n    displayName\n    profileImage(isAd: $isAd) {\n      id\n      image {\n        ...UploadedImage\n        __typename\n      }\n      __typename\n    }\n    roles\n    __typename\n  }\n}\n\nfragment UploadedImage on UploadedImage {\n  uuid\n  url\n  isExplicit\n  contentRating\n  height\n  width\n  __typename\n}",
+      }
     res = post(uri, { "Content-Type" => "application/json" }, data: payload.to_json, authed: true)
     return JSON.parse(res.body)
   end
 
-  def user(uuid,isLewd: false)
+  def user(uuid, isLewd: false)
     uri = URI("#{@api[:api]}/graphql")
     payload = {
       "operationName": "ProfileDetail",
@@ -141,11 +172,12 @@ class BarqWrapping
         "uuid": uuid,
         "isAd": isLewd,
       },
-      "query": "query ProfileDetail($uuid: String!, $isAd: Boolean, $location: SearchLocationInput) {\n  profile(uuid: $uuid, location: $location) {\n    id\n    uuid\n    displayName\n    relationType\n    isAdOptIn\n    isBirthday\n    age\n    profileImage(isAd: $isAd) {\n      id\n      image {\n        ...UploadedImage\n        __typename\n      }\n      __typename\n    }\n    privacySettings {\n      ...PrivacyFragment\n      __typename\n    }\n    images {\n      id\n      image {\n        ...UploadedImage\n        __typename\n      }\n      isAd\n      likeCount\n      hasLiked\n      accessPermission\n      __typename\n    }\n    location {\n      type\n      distance\n      place {\n        place\n        region\n        countryCode\n        longitude\n        latitude\n        __typename\n      }\n      __typename\n    }\n    bio {\n      biography\n      genders\n      languages\n      relationshipStatus\n      sexualOrientation\n      interests\n      hobbies {\n        id\n        interest\n        __typename\n      }\n      socialAccounts {\n        ...SocialAccountsFragment\n        __typename\n      }\n      __typename\n    }\n    bioAd {\n      biography\n      sexPositions\n      behaviour\n      safeSex\n      canHost\n      __typename\n    }\n    sonas {\n      id\n      displayName\n      images {\n        id\n        __typename\n      }\n      description\n      hasFursuit\n      species {\n        id\n        displayName\n        __typename\n      }\n      __typename\n    }\n    kinks {\n      kink {\n        id\n        displayName\n        categoryName\n        isVerified\n        isSinglePlayer\n        __typename\n      }\n      pleasureReceive\n      pleasureGive\n      __typename\n    }\n    groups {\n      group {\n        uuid\n        displayName\n        isAd\n        contentRating\n        image {\n          ...UploadedImage\n          __typename\n        }\n        __typename\n      }\n      threadCount\n      replyCount\n      __typename\n    }\n    events {\n      event {\n        uuid\n        displayName\n        isAd\n        contentRating\n        eventBeginAt\n        eventEndAt\n        image {\n          ...UploadedImage\n          __typename\n        }\n        __typename\n      }\n      isWaitingList\n      __typename\n    }\n    socialAccounts {\n      id\n      socialNetwork\n      isVerified\n      url\n      displayName\n      value\n      accessPermission\n      __typename\n    }\n    roles\n    shareHash\n    __typename\n  }\n}\n\nfragment UploadedImage on UploadedImage {\n  uuid\n  url\n  isExplicit\n  contentRating\n  height\n  width\n  __typename\n}\n\nfragment PrivacyFragment on PrivacySettings {\n  startChat\n  viewAge\n  viewAd\n  viewKinks\n  viewProfile\n  blockAdults\n  blockMinors\n  showLastOnline\n  __typename\n}\n\nfragment SocialAccountsFragment on ProfileSocialAccounts {\n  twitter {\n    value\n    accessPermission\n    __typename\n  }\n  twitterAd {\n    value\n    accessPermission\n    __typename\n  }\n  telegram {\n    value\n    accessPermission\n    __typename\n  }\n  instagram {\n    value\n    accessPermission\n    __typename\n  }\n  steam {\n    value\n    accessPermission\n    __typename\n  }\n  discord {\n    value\n    accessPermission\n    __typename\n  }\n  deviantArt {\n    value\n    accessPermission\n    __typename\n  }\n  furAffinity {\n    value\n    accessPermission\n    __typename\n  }\n  bluesky {\n    value\n    accessPermission\n    __typename\n  }\n  mastodon {\n    value\n    accessPermission\n    __typename\n  }\n  vrChat {\n    value\n    accessPermission\n    __typename\n  }\n  __typename\n}"
+      "query": "query ProfileDetail($uuid: String!, $isAd: Boolean, $location: SearchLocationInput) {\n  profile(uuid: $uuid, location: $location) {\n    id\n    uuid\n    displayName\n    relationType\n    isAdOptIn\n    isBirthday\n    age\n    profileImage(isAd: $isAd) {\n      id\n      image {\n        ...UploadedImage\n        __typename\n      }\n      __typename\n    }\n    privacySettings {\n      ...PrivacyFragment\n      __typename\n    }\n    images {\n      id\n      image {\n        ...UploadedImage\n        __typename\n      }\n      isAd\n      likeCount\n      hasLiked\n      accessPermission\n      __typename\n    }\n    location {\n      type\n      distance\n      place {\n        place\n        region\n        countryCode\n        longitude\n        latitude\n        __typename\n      }\n      __typename\n    }\n    bio {\n      biography\n      genders\n      languages\n      relationshipStatus\n      sexualOrientation\n      interests\n      hobbies {\n        id\n        interest\n        __typename\n      }\n      socialAccounts {\n        ...SocialAccountsFragment\n        __typename\n      }\n      __typename\n    }\n    bioAd {\n      biography\n      sexPositions\n      behaviour\n      safeSex\n      canHost\n      __typename\n    }\n    sonas {\n      id\n      displayName\n      images {\n        id\n        __typename\n      }\n      description\n      hasFursuit\n      species {\n        id\n        displayName\n        __typename\n      }\n      __typename\n    }\n    kinks {\n      kink {\n        id\n        displayName\n        categoryName\n        isVerified\n        isSinglePlayer\n        __typename\n      }\n      pleasureReceive\n      pleasureGive\n      __typename\n    }\n    groups {\n      group {\n        uuid\n        displayName\n        isAd\n        contentRating\n        image {\n          ...UploadedImage\n          __typename\n        }\n        __typename\n      }\n      threadCount\n      replyCount\n      __typename\n    }\n    events {\n      event {\n        uuid\n        displayName\n        isAd\n        contentRating\n        eventBeginAt\n        eventEndAt\n        image {\n          ...UploadedImage\n          __typename\n        }\n        __typename\n      }\n      isWaitingList\n      __typename\n    }\n    socialAccounts {\n      id\n      socialNetwork\n      isVerified\n      url\n      displayName\n      value\n      accessPermission\n      __typename\n    }\n    roles\n    shareHash\n    __typename\n  }\n}\n\nfragment UploadedImage on UploadedImage {\n  uuid\n  url\n  isExplicit\n  contentRating\n  height\n  width\n  __typename\n}\n\nfragment PrivacyFragment on PrivacySettings {\n  startChat\n  viewAge\n  viewAd\n  viewKinks\n  viewProfile\n  blockAdults\n  blockMinors\n  showLastOnline\n  __typename\n}\n\nfragment SocialAccountsFragment on ProfileSocialAccounts {\n  twitter {\n    value\n    accessPermission\n    __typename\n  }\n  twitterAd {\n    value\n    accessPermission\n    __typename\n  }\n  telegram {\n    value\n    accessPermission\n    __typename\n  }\n  instagram {\n    value\n    accessPermission\n    __typename\n  }\n  steam {\n    value\n    accessPermission\n    __typename\n  }\n  discord {\n    value\n    accessPermission\n    __typename\n  }\n  deviantArt {\n    value\n    accessPermission\n    __typename\n  }\n  furAffinity {\n    value\n    accessPermission\n    __typename\n  }\n  bluesky {\n    value\n    accessPermission\n    __typename\n  }\n  mastodon {\n    value\n    accessPermission\n    __typename\n  }\n  vrChat {\n    value\n    accessPermission\n    __typename\n  }\n  __typename\n}",
     }
     res = post(uri, { "Content-Type" => "application/json" }, data: payload.to_json, authed: true)
     return JSON.parse(res.body)
   end
+
   private
 
   def qr(token)

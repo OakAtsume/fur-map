@@ -1,9 +1,7 @@
 require_relative("src/barq")
 require_relative("src/log")
-require("tty-prompt")
 barq = BarqWrapping.new
 logo
-prompt = TTY::Prompt.new
 
 # Check if where currently Logged in #
 user = barq.localuser
@@ -22,12 +20,34 @@ ARGV.each do |arg|
     arguments[arg[0].gsub("--", "")] = arg[1]
   end
 end
+ARGV.clear # Clear the arguments so we don't get any errors.
 
 if arguments.has_key?("login")
-  log(level: :info, message: "Starting login process...")
-  barq.autologin
-  log(level: :info, message: "Login process completed.")
-  exit 0
+  # Login Methods: 0 = QRCode, 1 = Email + Verification Code.
+  # Check if way was provided.
+  if arguments["login"].nil?
+    log(level: :error, message: "Please provide a way to login.\n --login=0 for QRCode\n --login=1 for Email + Verification Code")
+    exit 1
+  end
+  way = arguments["login"].to_i
+  if way != 0 && way != 1
+    log(level: :error, message: "Invalid login method provided. Please provide a valid method.")
+    exit 1
+  end
+  log(level: :info, message: "Starting login process with method: #{way}")
+  case way
+  when 0
+    log(level: :info, message: "Starting login process Via QR-Code. Please have your phone ready.")
+    barq.qrLogin
+  when 1
+    if arguments["email"].nil?
+      log(level: :error, message: "Please provide an email address to login. (+ --email=<email>)")
+      exit 1
+    end
+    email = arguments["email"]
+    log(level: :info, message: "Starting login process Via Email. Please check your email for the verification code.")
+    barq.login(email)
+  end
 end
 
 if arguments.has_key?("help")
@@ -175,7 +195,7 @@ if arguments.has_key?("user")
     )
   end
 
-  if !user["kink"].nil?
+  if !user["kinks"].nil?
     # Kinks #
     hash = []
     user["kinks"].each do |kink|
